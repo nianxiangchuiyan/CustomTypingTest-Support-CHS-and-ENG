@@ -16,6 +16,8 @@ const CopyMode = () => {
   const [userInput, setUserInput] = useState<string>('');
   const [sourceSize, setSourceSize] = useState({ width: 400, height: 300 });
   const [inputSize, setInputSize] = useState({ width: 400, height: 300 });
+  const [sourceZIndex, setSourceZIndex] = useState(20);
+  const [inputZIndex, setInputZIndex] = useState(21);
 
   useEffect(() => {
     if (!textId) {
@@ -91,16 +93,23 @@ const CopyMode = () => {
       {/* Source Text Window */}
       <Draggable handle=".drag-handle-source" bounds="parent">
         <div
-          className="absolute z-20"
+          className="absolute"
           style={{
             width: sourceSize.width,
             height: sourceSize.height,
             top: 120,
             left: 80,
+            zIndex: sourceZIndex,
           }}
         >
           <Card className="h-full flex flex-col shadow-xl">
-            <div className="drag-handle-source cursor-move bg-primary/10 px-4 py-2 border-b flex items-center justify-between">
+            <div 
+              className="drag-handle-source cursor-move bg-primary/10 px-4 py-2 border-b flex items-center justify-between"
+              onMouseDown={() => {
+                const maxZ = Math.max(sourceZIndex, inputZIndex);
+                setSourceZIndex(maxZ + 1);
+              }}
+            >
               <span className="text-sm font-medium">原文</span>
               <span className="text-xs text-muted-foreground">拖拽移动</span>
             </div>
@@ -141,16 +150,23 @@ const CopyMode = () => {
       {/* Input Window */}
       <Draggable handle=".drag-handle-input" bounds="parent">
         <div
-          className="absolute z-20"
+          className="absolute"
           style={{
             width: inputSize.width,
             height: inputSize.height,
             top: 120,
             right: 80,
+            zIndex: inputZIndex,
           }}
         >
           <Card className="h-full flex flex-col shadow-xl">
-            <div className="drag-handle-input cursor-move bg-secondary/50 px-4 py-2 border-b flex items-center justify-between">
+            <div 
+              className="drag-handle-input cursor-move bg-secondary/50 px-4 py-2 border-b flex items-center justify-between"
+              onMouseDown={() => {
+                const maxZ = Math.max(sourceZIndex, inputZIndex);
+                setInputZIndex(maxZ + 1);
+              }}
+            >
               <span className="text-sm font-medium">输入区</span>
               <span className="text-xs text-muted-foreground">拖拽移动</span>
             </div>

@@ -39,7 +39,7 @@ All colors MUST be HSL.
     --error-foreground: 42 100% 98%;
 
     --text-untyped: 147 15% 70%;
-    --text-correct: 147 60% 45%;
+    --text-correct: 147 70% 50%;
     --text-error: 0 70% 55%;
 
     --border: 147 20% 85%;
@@ -90,7 +90,7 @@ All colors MUST be HSL.
     --error-foreground: 42 100% 98%;
 
     --text-untyped: 147 15% 40%;
-    --text-correct: 147 55% 50%;
+    --text-correct: 147 65% 55%;
     --text-error: 0 60% 50%;
 
     --border: 147 25% 20%;

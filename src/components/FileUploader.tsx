@@ -24,15 +24,20 @@ export const FileUploader = ({ onUploadComplete }: FileUploaderProps) => {
       const parsed = await parseFile(file, (page, total) => {
         console.log(`解析进度: ${page}/${total}`);
       });
-
-      // 保存到本地 storage
-      const textId = saveText(file.name, parsed);
-      
+    
+      // 如果是 PDF，parsed 是 PdfPageData[]，把每页文本合并
+      const content =
+        Array.isArray(parsed) 
+          ? parsed.map(p => p.text).join('\n\n') 
+          : (parsed as string);
+    
+      const textId = saveText(file.name, content);
+    
       toast({
         title: '文件上传成功',
         description: `已保存 ${file.name}`,
       });
-      
+    
       onUploadComplete(textId);
     } catch (error) {
       toast({

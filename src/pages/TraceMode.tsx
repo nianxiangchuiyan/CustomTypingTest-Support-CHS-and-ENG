@@ -91,21 +91,16 @@ const TraceMode = () => {
   const handleCompositionStart = () => setIsComposing(true);
 
   const handleCompositionEnd = (e: React.CompositionEvent<HTMLTextAreaElement>) => {
-    setIsComposing(false);
-    const composedText = e.data?.trim() ? e.data : e.currentTarget.value;
-    if (!composedText || currentIndex >= chars.length) {
-      e.currentTarget.value = '';
-      return;
-    }
+  setIsComposing(false);
+  const composedText = e.data || e.currentTarget.value || '';
+  e.currentTarget.value = '';
 
-    let newIndex = currentIndex;
-    const newChars = [...chars];
-    for (let i = 0; i < composedText.length && newIndex < chars.length; i++) {
-      const inputChar = composedText[i];
-      newChars[newIndex].status =
-        inputChar === newChars[newIndex].char ? 'correct' : 'error';
-      newIndex++;
-    }
+  if (!composedText) return;
+
+  handleTypedText(composedText);
+};
+
+
 
     pushHistory(newChars, newIndex);
     setRedoStack([]); // ✅ 输入后清空重做栈
@@ -117,40 +112,43 @@ const TraceMode = () => {
     }
   };
 
-  const handleInput = (e: React.FormEvent<HTMLTextAreaElement>) => {
-    if (isComposing) return;
-    const value = e.currentTarget.value;
-    if (!value) return;
+// ✅ 非 composition 状态输入（包括英文和回车）
+const handleInput = (e: React.FormEvent<HTMLTextAreaElement>) => {
+  if (isComposing) return; // 忽略输入法过程中的 input
+  const value = e.currentTarget.value;
+  e.currentTarget.value = '';
+  if (!value) return;
 
-    const newChars = [...chars];
-    let newIndex = currentIndex;
-    for (let i = 0; i < value.length && newIndex < chars.length; i++) {
-      const inputChar = value[i];
-      newChars[newIndex].status =
-        inputChar === newChars[newIndex].char ? 'correct' : 'error';
-      newIndex++;
-    }
+  handleTypedText(value);
+};
 
-    pushHistory(newChars, newIndex);
-    setRedoStack([]); // ✅ 新输入后清空重做栈
+// ✅ 封装输入处理逻辑（统一处理中英文、回车）
+const handleTypedText = (input: string) => {
+  let newIndex = currentIndex;
+  const newChars = [...chars];
 
-    e.currentTarget.value = '';
-    if (newIndex === chars.length && textId) {
-      saveProgress(textId, 'trace', newIndex);
-      toast({ title: '完成练习！', description: '恭喜您完成了全部文本' });
-    }
-  };
+  for (let i = 0; i < input.length && newIndex < newChars.length; i++) {
+    const inputChar = input[i];
+    const isCorrect = inputChar === newChars[newIndex].char;
+    newChars[newIndex].status = isCorrect ? 'correct' : 'error';
+    newIndex++;
+  }
+
+  pushHistory(newChars, newIndex);
+};
 
   /** ✅ 封装历史推入逻辑 */
   const pushHistory = (newChars: CharacterState[], newIndex: number) => {
-    setHistory(prev => {
-      const newHist = [...prev, { chars: structuredClone(newChars), currentIndex: newIndex }];
-      if (newHist.length > 100) newHist.shift();
-      return newHist;
-    });
-    setChars(newChars);
-    setCurrentIndex(newIndex);
-  };
+  setChars(newChars);
+  setCurrentIndex(newIndex);
+  setHistory(prev => {
+    const newHist = [...prev, { chars: structuredClone(newChars), currentIndex: newIndex }];
+    if (newHist.length > 100) newHist.shift();
+    return newHist;
+  });
+  setRedoStack([]); // 清空重做栈
+};
+
 
     // ✅ Ctrl + Shift + Z 重做版本
 const handleKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {

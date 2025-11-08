@@ -1,68 +1,83 @@
 import * as pdfjsLib from 'pdfjs-dist';
 import Tesseract from 'tesseract.js';
+import { supabase } from '@/integrations/supabase/client';
 
-// Configure PDF.js worker
+// 配置 PDF.js worker
 pdfjsLib.GlobalWorkerOptions.workerSrc = `https://cdnjs.cloudflare.com/ajax/libs/pdf.js/${pdfjsLib.version}/pdf.worker.min.js`;
 
-export interface PdfPageData {
-  text: string;
-  imageDataUrl: string;
-}
-
-export const parsePdfFile = async (file: File, onProgress?: (page: number, total: number) => void): Promise<PdfPageData[]> => {
+// 前端解析 PDF
+const parsePdfFrontend = async (file: File): Promise<string> => {
   const arrayBuffer = await file.arrayBuffer();
   const pdf = await pdfjsLib.getDocument({ data: arrayBuffer }).promise;
-  const totalPages = pdf.numPages;
-  const result: PdfPageData[] = [];
+  let fullText = '';
 
-  for (let i = 1; i <= totalPages; i++) {
+  for (let i = 1; i <= pdf.numPages; i++) {
     const page = await pdf.getPage(i);
     const scale = 1.5;
     const viewport = page.getViewport({ scale });
 
-    // Render page to canvas
+    // 渲染到 canvas（用于 OCR fallback）
     const canvas = document.createElement('canvas');
     const context = canvas.getContext('2d')!;
     canvas.width = viewport.width;
     canvas.height = viewport.height;
-
     await page.render({ canvasContext: context, viewport }).promise;
-    const imageDataUrl = canvas.toDataURL();
+    const pageDataUrl = canvas.toDataURL();
 
-    // Extract text content
+    // 提取文本
     const textContent = await page.getTextContent();
-    const items = textContent.items as any[];
-    items.sort((a, b) => {
-      const yDiff = Math.abs(a.transform[5] - b.transform[5]);
-      if (yDiff > 5) return b.transform[5] - a.transform[5];
-      return a.transform[4] - b.transform[4];
-    });
+    const pageText = textContent.items.map((item: any) => item.str || '').join('');
 
-    let lastY = -1;
-    let pageText = '';
-    items.forEach((item) => {
-      const y = item.transform[5];
-      if (lastY !== -1 && Math.abs(y - lastY) > 5) pageText += '\n';
-      if (pageText && !pageText.endsWith(' ') && !pageText.endsWith('\n')) pageText += ' ';
-      pageText += item.str;
-      lastY = y;
-    });
-
-    // OCR fallback if text is too short
-    if (pageText.trim().length < 5) {
-      console.log(`Page ${i} text too short, using OCR...`);
-      const ocrResult = await Tesseract.recognize(imageDataUrl, 'eng+chi_sim', {
-        logger: (m) => console.log(`OCR progress page ${i}:`, m)
-      });
-      pageText = ocrResult.data.text;
+    // 如果文本过短则使用 OCR
+    let finalText = pageText.trim();
+    if (finalText.length < 5) {
+      console.log(`第 ${i} 页文本不足，使用 OCR 解析...`);
+      const ocrResult = await Tesseract.recognize(
+        pageDataUrl,
+        'eng+chi_sim',
+        { logger: (m) => console.log('OCR进度:', m) }
+      );
+      finalText = ocrResult.data.text.trim();
     }
 
-    result.push({ text: pageText, imageDataUrl });
-
-    if (onProgress) onProgress(i, totalPages);
+    fullText += finalText + '\n\n';
   }
 
-  return result;
+  return fullText.trim();
+};
+
+// 后端解析 PDF（备用）
+const parsePdfBackend = async (file: File): Promise<string> => {
+  const formData = new FormData();
+  formData.append('file', file);
+
+  const { data, error } = await supabase.functions.invoke('parse-pdf', { body: formData });
+  if (error) throw new Error('后端 PDF 解析失败');
+  if (!data.success) throw new Error(data.error || '后端 PDF 解析失败');
+
+  return data.content;
+};
+
+// 主解析函数
+export const parsePdfFile = async (file: File): Promise<string> => {
+  try {
+    console.log('尝试前端解析 PDF...');
+    const text = await parsePdfFrontend(file);
+    if (text.length < 10) {
+      console.log('前端解析文本不足，尝试后端解析...');
+      return await parsePdfBackend(file);
+    }
+    console.log('前端 PDF 解析成功');
+    return text;
+  } catch (err) {
+    console.warn('前端解析失败，尝试后端解析...', err);
+    try {
+      return await parsePdfBackend(file);
+    } catch (backendErr) {
+      console.error('后端解析也失败了', backendErr);
+      throw new Error('PDF 解析失败，请尝试其他文件或检查 PDF 是否损坏');
+    }
+  }
 };
 
 // 普通文本文件解析

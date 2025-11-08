@@ -39,9 +39,9 @@ const TraceMode = () => {
     }
     setText(savedText.content);
     const savedProgress = getProgress(textId, 'trace');
-    const initialChars = savedText.content.split('').map((char, idx) => ({
+    const initialChars = savedText.content.replace(/\r\n/g, '\n').split('').map((char, index) => ({
       char,
-      status: idx < savedProgress ? 'correct' : 'untyped',
+      status: index < savedProgress ? 'correct' : 'untyped',
     }));
     setChars(initialChars);
     setCurrentIndex(savedProgress);
@@ -78,14 +78,17 @@ const TraceMode = () => {
   };
 
   const handleTypedText = (input: string) => {
+    const normalizedInput = input.replace(/\r\n/g, '\n');
     let newIndex = currentIndex;
     const newChars = [...chars];
-    for (const ch of input) {
-      if (newIndex >= newChars.length) break;
-      const expected = newChars[newIndex].char;
-      newChars[newIndex].status = ch === expected ? 'correct' : 'error';
+
+    for (let i = 0; i < normalizedInput.length && newIndex < newChars.length; i++) {
+      const inputChar = normalizedInput[i];
+      const isCorrect = inputChar === newChars[newIndex].char;
+      newChars[newIndex].status = isCorrect ? 'correct' : 'error';
       newIndex++;
     }
+
     pushHistory(newChars, newIndex);
   };
 

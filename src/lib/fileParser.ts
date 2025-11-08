@@ -1,10 +1,9 @@
-import * as pdfjsLib from 'pdfjs-dist/legacy/build/pdf';
-import { GlobalWorkerOptions } from 'pdfjs-dist/legacy/build/pdf';
+import * as pdfjsLib from 'pdfjs-dist';
 import Tesseract from 'tesseract.js';
 import { supabase } from '@/integrations/supabase/client';
 
-// 使用 legacy 内置 worker，避免外部路径问题
-GlobalWorkerOptions.workerSrc = '';
+// 使用 unpkg CDN 加载 worker
+pdfjsLib.GlobalWorkerOptions.workerSrc = `https://unpkg.com/pdfjs-dist@${pdfjsLib.version}/build/pdf.worker.min.mjs`;
 
 export interface PdfPageData {
   pageNumber: number;
@@ -31,7 +30,7 @@ export const parsePdfFrontend = async (
     const ctx = canvas.getContext('2d')!;
     canvas.width = viewport.width;
     canvas.height = viewport.height;
-    await page.render({ canvasContext: ctx, viewport }).promise;
+    await page.render({ canvasContext: ctx as any, viewport } as any).promise;
     const imageDataUrl = canvas.toDataURL();
 
     const textContent = await page.getTextContent();

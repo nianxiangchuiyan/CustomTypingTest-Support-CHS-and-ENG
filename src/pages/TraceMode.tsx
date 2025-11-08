@@ -151,10 +151,15 @@ const TraceMode = () => {
     }
 
     // Enter
-    if (e.key === 'Enter') {
-      e.preventDefault();
-      handleTypedText('\n');
+  if (e.key === 'Enter') {
+    e.preventDefault();
+    // 当前字符必须是 \n 才算正确，否则也标记错误
+    const newChars = [...chars];
+    if (currentIndex < newChars.length) {
+      newChars[currentIndex].status = newChars[currentIndex].char === '\n' ? 'correct' : 'error';
+      pushHistory(newChars, currentIndex + 1); // ✅ 立即推进 currentIndex
     }
+  }
   };
 
   const handleReset = () => {

@@ -1,10 +1,12 @@
 import * as pdfjsLib from 'pdfjs-dist';
 import Tesseract from 'tesseract.js';
 import { supabase } from '@/integrations/supabase/client';
+import * as pdfjsLib from 'pdfjs-dist/legacy/build/pdf';
+import workerSrc from 'pdfjs-dist/legacy/build/pdf.worker.entry';
+
+pdfjsLib.GlobalWorkerOptions.workerSrc = workerSrc;
 
 // PDF.js worker 配置
-pdfjsLib.GlobalWorkerOptions.workerSrc = `https://cdnjs.cloudflare.com/ajax/libs/pdf.js/${pdfjsLib.version}/pdf.worker.min.js`;
-
 // 每页数据类型
 export interface PdfPageData {
   pageNumber: number;

@@ -24,6 +24,7 @@ export const FileUploader = ({ onUploadComplete }: FileUploaderProps) => {
       const parsed = await parseFile(file, (page, total) => {
         console.log(`解析进度: ${page}/${total}`);
       });
+      console.log('parsed 文件内容：', parsed);
     
       // 如果是 PDF，parsed 是 PdfPageData[]，把每页文本合并
       const content =

@@ -30,36 +30,40 @@ const TraceMode = () => {
   const inputRef = useRef<HTMLTextAreaElement>(null);
 
   // 初始化文本和进度
+  // TraceMode 初始化
   useEffect(() => {
     if (!textId) return navigate('/');
-
+  
     const savedText = getTextById(textId);
     if (!savedText) {
       toast({ title: '文本未找到', description: '返回主页重新选择', variant: 'destructive' });
       return navigate('/');
     }
-
+  
+    // ✅ 如果 content 是数组（PDF），合并每页文本
     let fullText = '';
     if (Array.isArray(savedText.content)) {
-      // PDF: 合并每页文本
       fullText = savedText.content.map((p: any) => p.text || '').join('\n\n');
-    } else {
-      // TXT
+    } else if (typeof savedText.content === 'string') {
       fullText = savedText.content;
+    } else {
+      console.warn('文本内容类型异常，转为空字符串');
+      fullText = '';
     }
 
-    setText(fullText);
+  setText(fullText);
 
-    const savedProgress = getProgress(textId, 'trace');
-    const initialChars = fullText.replace(/\r\n/g, '\n').split('').map((char, index) => ({
-      char,
-      status: (index < savedProgress ? 'correct' : 'untyped') as CharStatus,
-    }));
+  const savedProgress = getProgress(textId, 'trace');
+  const initialChars = fullText.replace(/\r\n/g, '\n').split('').map((char, index) => ({
+    char,
+    status: (index < savedProgress ? 'correct' : 'untyped') as CharStatus,
+  }));
 
-    setChars(initialChars);
-    setCurrentIndex(savedProgress);
-    setHistory([{ chars: structuredClone(initialChars), currentIndex: savedProgress }]);
-  }, [textId, navigate, toast]);
+  setChars(initialChars);
+  setCurrentIndex(savedProgress);
+  setHistory([{ chars: structuredClone(initialChars), currentIndex: savedProgress }]);
+}, [textId, navigate, toast]);
+
 
   // 自动保存
   useEffect(() => {

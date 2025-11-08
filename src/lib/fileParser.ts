@@ -1,4 +1,3 @@
-import * as pdfjsLib from 'pdfjs-dist';
 import Tesseract from 'tesseract.js';
 import { supabase } from '@/integrations/supabase/client';
 import * as pdfjsLib from 'pdfjs-dist/legacy/build/pdf';

@@ -86,52 +86,94 @@ const TraceMode = () => {
     }
   };
 
-  const handleCompositionStart = () => setIsComposing(true);
-  const handleCompositionEnd = (e: React.CompositionEvent<HTMLTextAreaElement>) => {
-    setIsComposing(false);
-    const composedText = e.data;
-    if (!composedText) return;
+  // 开始 composition
+const handleCompositionStart = () => {
+  setIsComposing(true);
+};
 
-    let newIndex = currentIndex;
-    const newChars = [...chars];
-    for (let i = 0; i < composedText.length && newIndex < chars.length; i++) {
-      const inputChar = composedText[i];
-      const isCorrect = inputChar === chars[newIndex].char;
-      newChars[newIndex].status = isCorrect ? 'correct' : 'error';
-      newIndex++;
+// composition 结束 —— 优先用 e.data，回退读取 textarea.value
+const handleCompositionEnd = (e: React.CompositionEvent<HTMLTextAreaElement>) => {
+  setIsComposing(false);
+
+  // 尝试用 e.data（通常包含刚选中的文字），若没有则读取 textarea.value
+  const composedText = (e.data && e.data.length > 0) ? e.data : (e.currentTarget.value || '');
+
+  if (!composedText || currentIndex >= chars.length) {
+    // 清空输入框以防重复处理（有些浏览器会在 compositionend 后也触发 input）
+    e.currentTarget.value = '';
+    return;
+  }
+
+  let newIndex = currentIndex;
+  const newChars = [...chars];
+
+  for (let i = 0; i < composedText.length && newIndex < chars.length; i++) {
+    const inputChar = composedText[i];
+    const isCorrect = inputChar === newChars[newIndex].char;
+    newChars[newIndex].status = isCorrect ? 'correct' : 'error';
+    newIndex++;
+  }
+
+  setChars(newChars);
+  setCurrentIndex(newIndex);
+
+  // 清空输入框，避免后续 input 再次处理相同文本
+  e.currentTarget.value = '';
+
+  // 完成提示与保存
+  if (newIndex === chars.length && textId) {
+    saveProgress(textId, 'trace', newIndex);
+    toast({
+      title: '完成练习！',
+      description: '恭喜您完成了全部文本',
+    });
+  }
+};
+
+// 非 composition 状态下的 input（用于英文、空格、回车等直接输入）
+const handleInput = (e: React.FormEvent<HTMLTextAreaElement>) => {
+  if (isComposing) return; // 正在合成时不要处理
+
+  const value = e.currentTarget.value; // **不要 trim()**，保留空格和换行
+  if (!value) return;
+
+  const newChars = [...chars];
+  let newIndex = currentIndex;
+
+  for (let i = 0; i < value.length && newIndex < chars.length; i++) {
+    const inputChar = value[i];
+    const isCorrect = inputChar === newChars[newIndex].char;
+    newChars[newIndex].status = isCorrect ? 'correct' : 'error';
+    newIndex++;
+  }
+
+  setChars(newChars);
+  setCurrentIndex(newIndex);
+
+  // 清空输入框，准备下一次输入
+  e.currentTarget.value = '';
+
+  if (newIndex === chars.length && textId) {
+    saveProgress(textId, 'trace', newIndex);
+    toast({
+      title: '完成练习！',
+      description: '恭喜您完成了全部文本',
+    });
+  }
+};
+
+// KeyDown 只用于 Backspace（避免与字符输入冲突）
+const handleKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
+  if (isComposing) return;
+
+  if (e.key === 'Backspace') {
+    e.preventDefault();
+    if (currentIndex > 0) {
+      const newChars = [...chars];
+      newChars[currentIndex - 1].status = 'untyped';
+      setChars(newChars);
+      setCurrentIndex(currentIndex - 1);
     }
-    setChars(newChars);
-    setCurrentIndex(newIndex);
-  };
-
-  const handleInput = (e: React.FormEvent<HTMLTextAreaElement>) => {
-    if (isComposing) return;
-    const value = e.currentTarget.value.trim();
-    if (!value) return;
-
-    const newChars = [...chars];
-    let newIndex = currentIndex;
-    for (let i = 0; i < value.length && newIndex < chars.length; i++) {
-      const inputChar = value[i];
-      const isCorrect = inputChar === chars[newIndex].char;
-      newChars[newIndex].status = isCorrect ? 'correct' : 'error';
-      newIndex++;
-    }
-    setChars(newChars);
-    setCurrentIndex(newIndex);
-    e.currentTarget.value = ''; // 清空输入框
-  };
-
-  const handleKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
-    if (isComposing) return;
-    if (e.key === 'Backspace') {
-      e.preventDefault();
-      if (currentIndex > 0) {
-        const newChars = [...chars];
-        newChars[currentIndex - 1].status = 'untyped';
-        setChars(newChars);
-        setCurrentIndex(currentIndex - 1);
-      }
     }
   };
 

@@ -32,11 +32,34 @@ const TraceMode = () => {
   // 初始化文本和进度
   useEffect(() => {
     if (!textId) return navigate('/');
+  
     const savedText = getTextById(textId);
     if (!savedText) {
       toast({ title: '文本未找到', description: '返回主页重新选择', variant: 'destructive' });
       return navigate('/');
     }
+  
+    let fullText = '';
+    if (Array.isArray(savedText.content)) {
+      // PDF: 合并每页文本
+      fullText = savedText.content.map((p: any) => p.text || '').join('\n\n');
+    } else {
+      // TXT: 直接使用
+      fullText = savedText.content;
+    }
+  
+    setText(fullText);
+  
+    const savedProgress = getProgress(textId, 'trace');
+    const initialChars = fullText.replace(/\r\n/g, '\n').split('').map((char, index) => ({
+      char,
+      status: (index < savedProgress ? 'correct' : 'untyped') as CharStatus,
+    }));
+  
+    setChars(initialChars);
+    setCurrentIndex(savedProgress);
+    setHistory([{ chars: structuredClone(initialChars), currentIndex: savedProgress }]);
+  }, [textId, navigate, toast]);
     setText(savedText.content);
     const savedProgress = getProgress(textId, 'trace');
     const initialChars = savedText.content.replace(/\r\n/g, '\n').split('').map((char, index) => ({

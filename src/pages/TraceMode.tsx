@@ -70,39 +70,46 @@ const TraceMode = () => {
 
   const handleCompositionStart = () => {
     setIsComposing(true);
-    compositionRef.current = '';
   };
 
   const handleCompositionUpdate = (e: React.CompositionEvent) => {
-    compositionRef.current = e.data;
+    // Just track that composition is ongoing
   };
 
   const handleCompositionEnd = (e: React.CompositionEvent) => {
     setIsComposing(false);
-    const inputChar = e.data;
+    const composedText = e.data;
     
-    if (inputChar && currentIndex < chars.length) {
-      const newChars = [...chars];
-      const isCorrect = inputChar === chars[currentIndex].char;
-      newChars[currentIndex].status = isCorrect ? 'correct' : 'error';
-      setChars(newChars);
-      setCurrentIndex(currentIndex + 1);
-
-      if (currentIndex + 1 === chars.length && textId) {
-        saveProgress(textId, 'trace', currentIndex + 1);
-        toast({
-          title: '完成练习！',
-          description: '恭喜您完成了全部文本',
-        });
-      }
+    if (!composedText || currentIndex >= chars.length) return;
+    
+    // Process each character from the composed text
+    let newIndex = currentIndex;
+    const newChars = [...chars];
+    
+    for (let i = 0; i < composedText.length && newIndex < chars.length; i++) {
+      const inputChar = composedText[i];
+      const isCorrect = inputChar === chars[newIndex].char;
+      newChars[newIndex].status = isCorrect ? 'correct' : 'error';
+      newIndex++;
     }
     
-    compositionRef.current = '';
+    setChars(newChars);
+    setCurrentIndex(newIndex);
+
+    if (newIndex === chars.length && textId) {
+      saveProgress(textId, 'trace', newIndex);
+      toast({
+        title: '完成练习！',
+        description: '恭喜您完成了全部文本',
+      });
+    }
   };
 
   const handleKeyDown = (e: React.KeyboardEvent) => {
-    // Ignore key events during composition (Chinese input)
-    if (isComposing) return;
+    // Completely ignore all key events during IME composition
+    if (isComposing) {
+      return;
+    }
     
     if (currentIndex >= chars.length) return;
 
@@ -117,7 +124,8 @@ const TraceMode = () => {
       return;
     }
 
-    if (e.key.length === 1) {
+    // Only process single character keys (not during composition)
+    if (e.key.length === 1 && !e.ctrlKey && !e.altKey && !e.metaKey) {
       e.preventDefault();
       const newChars = [...chars];
       const isCorrect = e.key === chars[currentIndex].char;

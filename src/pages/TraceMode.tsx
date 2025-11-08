@@ -15,7 +15,11 @@ interface HistoryState {
   currentIndex: number;
 }
 
-const TraceMode: React.FC<{ text: string }> = ({ text }) => {
+const TraceMode: React.FC = () => {
+  const { textId } = useParams<{ textId: string }>();
+  const navigate = useNavigate();
+  const { toast } = useToast();
+  const [text, setText] = useState<string>('');
   const [chars, setChars] = useState<Char[]>([]);
   const [currentIndex, setCurrentIndex] = useState(0);
   const [isComposing, setIsComposing] = useState(false);
@@ -23,8 +27,30 @@ const TraceMode: React.FC<{ text: string }> = ({ text }) => {
   const [redoStack, setRedoStack] = useState<HistoryState[]>([]);
   const textAreaRef = useRef<HTMLTextAreaElement>(null);
 
-  // ✅ 初始化字符数组并显示 ↲ 提示
+  // Load text from storage
   useEffect(() => {
+    if (!textId) {
+      navigate('/');
+      return;
+    }
+    
+    const loadedText = getTextById(textId);
+    if (!loadedText) {
+      toast({
+        title: "Text not found",
+        description: "Redirecting to home page...",
+        variant: "destructive",
+      });
+      navigate('/');
+      return;
+    }
+    
+    setText(loadedText.content);
+  }, [textId, navigate, toast]);
+
+  // Initialize character array with ↲ for newlines
+  useEffect(() => {
+    if (!text) return;
     const charsArr = Array.from(text).map((c) => ({
       char: c === "\n" ? "↲" : c,
       status: "untyped" as const,
@@ -138,7 +164,18 @@ const TraceMode: React.FC<{ text: string }> = ({ text }) => {
   const focusInput = () => textAreaRef.current?.focus();
 
   return (
-    <div className="flex flex-col items-center justify-center p-4 space-y-4">
+    <div className="min-h-screen p-4">
+      <div className="max-w-4xl mx-auto space-y-4">
+        <Button
+          variant="outline"
+          onClick={() => navigate('/')}
+          className="mb-4"
+        >
+          <ArrowLeft className="mr-2 h-4 w-4" />
+          Back to Home
+        </Button>
+        
+        <div className="flex flex-col items-center justify-center space-y-4">
       <div
         className="p-4 rounded-xl border w-full max-w-2xl min-h-[200px] cursor-text leading-relaxed text-lg"
         onClick={focusInput}
@@ -176,6 +213,8 @@ const TraceMode: React.FC<{ text: string }> = ({ text }) => {
         Backspace 回退 · Ctrl+Z 撤销 · Ctrl+Shift+Z 重做  
         <br />
         ↲ 表示需要输入回车
+      </div>
+        </div>
       </div>
     </div>
   );

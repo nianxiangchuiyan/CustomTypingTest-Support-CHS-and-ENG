@@ -20,30 +20,19 @@ export const FileUploader = ({ onUploadComplete }: FileUploaderProps) => {
     if (!file) return;
 
     setIsUploading(true);
-
     try {
-      // 解析文件（支持 TXT / PDF）
-      const result = await parseFile(file, (page, total) => {
+      const parsed = await parseFile(file, (page, total) => {
         console.log(`解析进度: ${page}/${total}`);
       });
 
-      // 如果是 PDF，result 是 PdfPageData[]，否则是字符串
-      let content: string;
-      if (Array.isArray(result)) {
-        // 合并每页文本
-        content = result.map(p => p.text).join('\n\n');
-      } else {
-        content = result;
-      }
-
-      // 保存文本
-      const textId = saveText(file.name, content);
-
+      // 保存到本地 storage
+      const textId = saveText(file.name, parsed);
+      
       toast({
         title: '文件上传成功',
         description: `已保存 ${file.name}`,
       });
-
+      
       onUploadComplete(textId);
     } catch (error) {
       toast({
@@ -53,7 +42,9 @@ export const FileUploader = ({ onUploadComplete }: FileUploaderProps) => {
       });
     } finally {
       setIsUploading(false);
-      if (fileInputRef.current) fileInputRef.current.value = '';
+      if (fileInputRef.current) {
+        fileInputRef.current.value = '';
+      }
     }
   };
 

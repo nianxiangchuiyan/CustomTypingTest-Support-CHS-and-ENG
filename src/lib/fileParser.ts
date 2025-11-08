@@ -1,12 +1,9 @@
 import * as pdfjsLib from 'pdfjs-dist';
+import Tesseract from 'tesseract.js';
 import { supabase } from '@/integrations/supabase/client';
 
-// Configure PDF.js worker with local fallback
-try {
-  pdfjsLib.GlobalWorkerOptions.workerSrc = `https://cdnjs.cloudflare.com/ajax/libs/pdf.js/${pdfjsLib.version}/pdf.worker.min.js`;
-} catch (error) {
-  console.error('Failed to load PDF.js worker:', error);
-}
+// Configure PDF.js worker
+pdfjsLib.GlobalWorkerOptions.workerSrc = `https://cdnjs.cloudflare.com/ajax/libs/pdf.js/${pdfjsLib.version}/pdf.worker.min.js`;
 
 export const parseTextFile = async (file: File): Promise<string> => {
   return new Promise((resolve, reject) => {
@@ -48,10 +45,28 @@ const parsePdfFrontend = async (file: File): Promise<string> => {
 
   for (let i = 1; i <= pdf.numPages; i++) {
     const page = await pdf.getPage(i);
-    const textContent = await page.getTextContent();
+    const scale = 1.5;
+    const viewport = page.getViewport({ scale });
+
+    // Render page to canvas
+    const canvas = document.createElement('canvas');
+    const context = canvas.getContext('2d')!;
     
-    // Sort items by vertical then horizontal position for better text flow
+    canvas.width = viewport.width;
+    canvas.height = viewport.height;
+    
+    await page.render({
+      canvasContext: context,
+      viewport
+    } as any).promise;
+
+    const pageDataUrl = canvas.toDataURL();
+
+    // Extract text content
+    const textContent = await page.getTextContent();
     const items = textContent.items as any[];
+    
+    // Sort items by vertical then horizontal position
     items.sort((a, b) => {
       const yDiff = Math.abs(a.transform[5] - b.transform[5]);
       if (yDiff > 5) {
@@ -79,6 +94,17 @@ const parsePdfFrontend = async (file: File): Promise<string> => {
       pageText += item.str;
       lastY = y;
     });
+
+    // If extracted text is too short, fallback to OCR
+    if (pageText.trim().length < 5) {
+      console.log(`第${i}页文本提取不足，使用OCR...`);
+      const ocrResult = await Tesseract.recognize(
+        pageDataUrl,
+        'eng+chi_sim',
+        { logger: (m) => console.log('OCR进度:', m) }
+      );
+      pageText = ocrResult.data.text;
+    }
 
     fullText += pageText + '\n\n';
   }

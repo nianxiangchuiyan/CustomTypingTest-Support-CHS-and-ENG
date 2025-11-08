@@ -41,7 +41,7 @@ const TraceMode = () => {
     const savedProgress = getProgress(textId, 'trace');
     const initialChars = savedText.content.replace(/\r\n/g, '\n').split('').map((char, index) => ({
       char,
-      status: index < savedProgress ? 'correct' : 'untyped',
+      status: (index < savedProgress ? 'correct' : 'untyped') as CharStatus,
     }));
     setChars(initialChars);
     setCurrentIndex(savedProgress);
@@ -166,7 +166,10 @@ const TraceMode = () => {
   };
 
   const handleReset = () => {
-    const resetChars = text.split('').map(char => ({ char, status: 'untyped' }));
+    const resetChars: CharacterState[] = text.split('').map(char => ({ 
+      char, 
+      status: 'untyped' as CharStatus 
+    }));
     setChars(resetChars);
     setCurrentIndex(0);
     setHistory([{ chars: structuredClone(resetChars), currentIndex: 0 }]);

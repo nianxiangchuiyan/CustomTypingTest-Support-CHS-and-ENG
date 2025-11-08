@@ -185,16 +185,68 @@ const TraceMode = () => {
         </div>
 
         <div className="bg-card rounded-lg p-8 shadow-lg">
+          <div className="bg-card rounded-lg p-8 shadow-lg">
           <div
-            ref={inputRef}
-            tabIndex={0}
-            onKeyDown={handleKeyDown}
-            onCompositionStart={handleCompositionStart}
-            onCompositionUpdate={handleCompositionUpdate}
-            onCompositionEnd={handleCompositionEnd}
-            className="text-2xl leading-relaxed whitespace-pre-wrap outline-none cursor-text select-none font-mono"
+            className="relative text-2xl leading-relaxed whitespace-pre-wrap font-mono"
             style={{ wordBreak: 'break-all' }}
           >
+            {chars.map((char, index) => (
+              <span
+                key={index}
+                className={`${getCharClass(char.status)} ${
+                  index === currentIndex ? 'bg-accent/30' : ''
+                } transition-colors`}
+              >
+                {char.char}
+              </span>
+            ))}
+        
+            {/* 隐藏的输入框，用于 IME */}
+            <textarea
+              ref={inputRef}
+              value=""
+              onChange={() => {}} // 必需但留空
+              onKeyDown={handleKeyDown}
+              onCompositionStart={() => setIsComposing(true)}
+              onCompositionEnd={(e) => {
+                setIsComposing(false);
+                const composedText = e.data;
+                if (!composedText) return;
+        
+                let newIndex = currentIndex;
+                const newChars = [...chars];
+                for (let i = 0; i < composedText.length && newIndex < chars.length; i++) {
+                  const inputChar = composedText[i];
+                  const isCorrect = inputChar === chars[newIndex].char;
+                  newChars[newIndex].status = isCorrect ? 'correct' : 'error';
+                  newIndex++;
+                }
+                setChars(newChars);
+                setCurrentIndex(newIndex);
+              }}
+              onInput={(e) => {
+                // 英文直接输入的情况
+                if (isComposing) return;
+                const value = e.currentTarget.value.trim();
+                if (!value) return;
+                const newChars = [...chars];
+                let newIndex = currentIndex;
+                for (let i = 0; i < value.length && newIndex < chars.length; i++) {
+                  const inputChar = value[i];
+                  const isCorrect = inputChar === chars[newIndex].char;
+                  newChars[newIndex].status = isCorrect ? 'correct' : 'error';
+                  newIndex++;
+                }
+                setChars(newChars);
+                setCurrentIndex(newIndex);
+                e.currentTarget.value = ''; // 清空输入框
+              }}
+              className="absolute inset-0 w-full h-full opacity-0 cursor-text resize-none outline-none"
+              autoFocus
+            />
+          </div>
+        </div>
+
             {chars.map((char, index) => (
               <span
                 key={index}

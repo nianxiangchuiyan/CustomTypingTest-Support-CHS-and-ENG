@@ -13,6 +13,7 @@ interface CharacterState {
 }
 
 const TraceMode = () => {
+  const [history, setHistory] = useState<{ chars: CharState[]; currentIndex: number }[]>([]);
   const { textId } = useParams<{ textId: string }>();
   const navigate = useNavigate();
   const { toast } = useToast();
@@ -113,9 +114,21 @@ const handleCompositionEnd = (e: React.CompositionEvent<HTMLTextAreaElement>) =>
     newChars[newIndex].status = isCorrect ? 'correct' : 'error';
     newIndex++;
   }
+  // 保存历史记录
+setHistory((prev) => {
+  const newHist = [...prev, { chars: newChars, currentIndex: newIndex }];
+  // 限制最大长度，比如 100 步
+  if (newHist.length > 100) newHist.shift();
+  return newHist;
+});
 
   setChars(newChars);
   setCurrentIndex(newIndex);
+  setHistory((prev) => {
+  const newHist = [...prev, { chars: newChars, currentIndex: newIndex }];
+  if (newHist.length > 100) newHist.shift();
+  return newHist;
+});
 
   // 清空输入框，避免后续 input 再次处理相同文本
   e.currentTarget.value = '';
@@ -164,7 +177,24 @@ const handleInput = (e: React.FormEvent<HTMLTextAreaElement>) => {
 
 // KeyDown 只用于 Backspace（避免与字符输入冲突）
 const handleKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
-  if (isComposing) return;
+    if (isComposing) return;
+
+  // Ctrl + Z 撤销
+  if (e.ctrlKey && e.key.toLowerCase() === 'z') {
+    e.preventDefault();
+    if (history.length > 1) {
+      // 弹出当前状态，恢复上一个
+      setHistory((prev) => {
+        const newHist = [...prev];
+        newHist.pop(); // 移除当前状态
+        const last = newHist[newHist.length - 1];
+        setChars(structuredClone(last.chars)); // 深拷贝以避免引用问题
+        setCurrentIndex(last.currentIndex);
+        return newHist;
+      });
+    }
+    return;
+  }
 
   if (e.key === 'Backspace') {
     e.preventDefault();

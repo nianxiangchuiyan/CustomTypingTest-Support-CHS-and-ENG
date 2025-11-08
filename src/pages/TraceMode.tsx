@@ -35,6 +35,7 @@ const TraceMode = () => {
     if (!textId) return navigate('/');
   
     const savedText = getTextById(textId);
+    console.log('TraceMode: savedText =', savedText);
     if (!savedText) {
       toast({ title: '文本未找到', description: '返回主页重新选择', variant: 'destructive' });
       return navigate('/');

@@ -24,10 +24,6 @@ export const FileUploader = ({ onUploadComplete }: FileUploaderProps) => {
       const pages = await parseFile(file, (page, total) => {
         console.log(`解析进度: ${page}/${total}`);
       });
-      
-      pages.forEach(p => {
-        console.log(p.pageNumber, p.text, p.imageDataUrl);
-      });
       const textId = saveText(file.name, content);
       
       toast({

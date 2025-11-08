@@ -114,7 +114,13 @@ const handleCompositionEnd = (e: React.CompositionEvent<HTMLTextAreaElement>) =>
     newChars[newIndex].status = isCorrect ? 'correct' : 'error';
     newIndex++;
   }
-
+  // 保存历史记录
+setHistory((prev) => {
+  const newHist = [...prev, { chars: newChars, currentIndex: newIndex }];
+  // 限制最大长度，比如 100 步
+  if (newHist.length > 100) newHist.shift();
+  return newHist;
+});
 
   setChars(newChars);
   setCurrentIndex(newIndex);

@@ -2,8 +2,8 @@
 
 ## Project info
 **URL**： 已部署在https://swift-script-trainer.lovable.app/ **欢迎使用**
-**URL**: https://lovable.dev/projects/2395f69c-9d87-4c38-82e3-b3b767afc0a0
 
+**Lovable项目URL**: https://lovable.dev/projects/2395f69c-9d87-4c38-82e3-b3b767afc0a0
 ## How can I edit this code?
 
 There are several ways of editing your application.

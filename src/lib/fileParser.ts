@@ -1,9 +1,10 @@
+import * as pdfjsLib from 'pdfjs-dist/legacy/build/pdf';
+import { GlobalWorkerOptions } from 'pdfjs-dist/legacy/build/pdf';
 import Tesseract from 'tesseract.js';
 import { supabase } from '@/integrations/supabase/client';
-import * as pdfjsLib from 'pdfjs-dist/legacy/build/pdf';
-import pdfWorker from 'pdfjs-dist/legacy/build/pdf.worker.entry?worker';
 
-pdfjsLib.GlobalWorkerOptions.workerSrc = pdfWorker;
+// 使用 legacy 内置 worker，避免外部路径问题
+GlobalWorkerOptions.workerSrc = '';
 
 export interface PdfPageData {
   pageNumber: number;
@@ -13,7 +14,8 @@ export interface PdfPageData {
 
 export type ParsedFile = string | PdfPageData[];
 
-const parsePdfFrontend = async (
+// 前端解析 PDF
+export const parsePdfFrontend = async (
   file: File,
   onProgress?: (page: number, total: number) => void
 ): Promise<PdfPageData[]> => {
@@ -34,6 +36,7 @@ const parsePdfFrontend = async (
 
     const textContent = await page.getTextContent();
     const items = textContent.items as any[];
+
     items.sort((a, b) => {
       const yDiff = Math.abs(a.transform[5] - b.transform[5]);
       if (yDiff > 5) return b.transform[5] - a.transform[5];
@@ -66,16 +69,17 @@ const parsePdfFrontend = async (
   return pages;
 };
 
-const parsePdfBackend = async (file: File): Promise<PdfPageData[]> => {
+// 后端解析 PDF（备用）
+export const parsePdfBackend = async (file: File): Promise<PdfPageData[]> => {
   const formData = new FormData();
   formData.append('file', file);
-
   const { data, error } = await supabase.functions.invoke('parse-pdf', { body: formData });
   if (error) throw new Error('后端 PDF 解析失败');
   if (!data.success) throw new Error(data.error || '后端 PDF 解析失败');
   return data.pages;
 };
 
+// 主解析函数
 export const parsePdfFile = async (
   file: File,
   onProgress?: (page: number, total: number) => void
@@ -91,6 +95,7 @@ export const parsePdfFile = async (
   }
 };
 
+// 普通文本解析
 export const parseTextFile = async (file: File): Promise<string> => {
   return new Promise((resolve, reject) => {
     const reader = new FileReader();
@@ -100,6 +105,7 @@ export const parseTextFile = async (file: File): Promise<string> => {
   });
 };
 
+// 自动选择解析方式
 export const parseFile = async (
   file: File,
   onProgress?: (page: number, total: number) => void

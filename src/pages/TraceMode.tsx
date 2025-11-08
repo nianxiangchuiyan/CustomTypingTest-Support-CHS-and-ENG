@@ -20,6 +20,8 @@ const TraceMode = () => {
   const [chars, setChars] = useState<CharacterState[]>([]);
   const [currentIndex, setCurrentIndex] = useState(0);
   const inputRef = useRef<HTMLDivElement>(null);
+  const [isComposing, setIsComposing] = useState(false);
+  const compositionRef = useRef<string>('');
 
   useEffect(() => {
     if (!textId) {
@@ -66,7 +68,42 @@ const TraceMode = () => {
     inputRef.current?.focus();
   }, []);
 
+  const handleCompositionStart = () => {
+    setIsComposing(true);
+    compositionRef.current = '';
+  };
+
+  const handleCompositionUpdate = (e: React.CompositionEvent) => {
+    compositionRef.current = e.data;
+  };
+
+  const handleCompositionEnd = (e: React.CompositionEvent) => {
+    setIsComposing(false);
+    const inputChar = e.data;
+    
+    if (inputChar && currentIndex < chars.length) {
+      const newChars = [...chars];
+      const isCorrect = inputChar === chars[currentIndex].char;
+      newChars[currentIndex].status = isCorrect ? 'correct' : 'error';
+      setChars(newChars);
+      setCurrentIndex(currentIndex + 1);
+
+      if (currentIndex + 1 === chars.length && textId) {
+        saveProgress(textId, 'trace', currentIndex + 1);
+        toast({
+          title: '完成练习！',
+          description: '恭喜您完成了全部文本',
+        });
+      }
+    }
+    
+    compositionRef.current = '';
+  };
+
   const handleKeyDown = (e: React.KeyboardEvent) => {
+    // Ignore key events during composition (Chinese input)
+    if (isComposing) return;
+    
     if (currentIndex >= chars.length) return;
 
     if (e.key === 'Backspace') {
@@ -144,6 +181,9 @@ const TraceMode = () => {
             ref={inputRef}
             tabIndex={0}
             onKeyDown={handleKeyDown}
+            onCompositionStart={handleCompositionStart}
+            onCompositionUpdate={handleCompositionUpdate}
+            onCompositionEnd={handleCompositionEnd}
             className="text-2xl leading-relaxed whitespace-pre-wrap outline-none cursor-text select-none font-mono"
             style={{ wordBreak: 'break-all' }}
           >

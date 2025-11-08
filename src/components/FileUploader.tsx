@@ -2,7 +2,7 @@ import { useRef, useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { Upload, FileText } from 'lucide-react';
-import { parseFile } from '@/lib/fileParser';
+import { parseFile, PdfPageData } from '@/lib/fileParser';
 import { saveText } from '@/lib/storage';
 import { useToast } from '@/hooks/use-toast';
 
@@ -20,17 +20,30 @@ export const FileUploader = ({ onUploadComplete }: FileUploaderProps) => {
     if (!file) return;
 
     setIsUploading(true);
+
     try {
-      const pages = await parseFile(file, (page, total) => {
+      // 解析文件（支持 TXT / PDF）
+      const result = await parseFile(file, (page, total) => {
         console.log(`解析进度: ${page}/${total}`);
       });
+
+      // 如果是 PDF，result 是 PdfPageData[]，否则是字符串
+      let content: string;
+      if (Array.isArray(result)) {
+        // 合并每页文本
+        content = result.map(p => p.text).join('\n\n');
+      } else {
+        content = result;
+      }
+
+      // 保存文本
       const textId = saveText(file.name, content);
-      
+
       toast({
         title: '文件上传成功',
         description: `已保存 ${file.name}`,
       });
-      
+
       onUploadComplete(textId);
     } catch (error) {
       toast({
@@ -40,9 +53,7 @@ export const FileUploader = ({ onUploadComplete }: FileUploaderProps) => {
       });
     } finally {
       setIsUploading(false);
-      if (fileInputRef.current) {
-        fileInputRef.current.value = '';
-      }
+      if (fileInputRef.current) fileInputRef.current.value = '';
     }
   };
 

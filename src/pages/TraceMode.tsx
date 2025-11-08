@@ -32,40 +32,30 @@ const TraceMode = () => {
   // 初始化文本和进度
   useEffect(() => {
     if (!textId) return navigate('/');
-  
+
     const savedText = getTextById(textId);
     if (!savedText) {
       toast({ title: '文本未找到', description: '返回主页重新选择', variant: 'destructive' });
       return navigate('/');
     }
-  
+
     let fullText = '';
     if (Array.isArray(savedText.content)) {
       // PDF: 合并每页文本
       fullText = savedText.content.map((p: any) => p.text || '').join('\n\n');
     } else {
-      // TXT: 直接使用
+      // TXT
       fullText = savedText.content;
     }
-  
+
     setText(fullText);
-  
+
     const savedProgress = getProgress(textId, 'trace');
     const initialChars = fullText.replace(/\r\n/g, '\n').split('').map((char, index) => ({
       char,
       status: (index < savedProgress ? 'correct' : 'untyped') as CharStatus,
     }));
-  
-    setChars(initialChars);
-    setCurrentIndex(savedProgress);
-    setHistory([{ chars: structuredClone(initialChars), currentIndex: savedProgress }]);
-  }, [textId, navigate, toast]);
-    setText(savedText.content);
-    const savedProgress = getProgress(textId, 'trace');
-    const initialChars = savedText.content.replace(/\r\n/g, '\n').split('').map((char, index) => ({
-      char,
-      status: (index < savedProgress ? 'correct' : 'untyped') as CharStatus,
-    }));
+
     setChars(initialChars);
     setCurrentIndex(savedProgress);
     setHistory([{ chars: structuredClone(initialChars), currentIndex: savedProgress }]);
@@ -116,7 +106,6 @@ const TraceMode = () => {
   };
 
   const handleCompositionStart = () => setIsComposing(true);
-
   const handleCompositionEnd = (e: React.CompositionEvent<HTMLTextAreaElement>) => {
     setIsComposing(false);
     const composedText = e.data || '';
@@ -124,7 +113,6 @@ const TraceMode = () => {
     handleTypedText(composedText);
     e.currentTarget.value = '';
   };
-
   const handleInput = (e: React.FormEvent<HTMLTextAreaElement>) => {
     if (isComposing) return;
     const value = e.currentTarget.value;
@@ -177,22 +165,18 @@ const TraceMode = () => {
     }
 
     // Enter
-  if (e.key === 'Enter') {
-    e.preventDefault();
-    // 当前字符必须是 \n 才算正确，否则也标记错误
-    const newChars = [...chars];
-    if (currentIndex < newChars.length) {
-      newChars[currentIndex].status = newChars[currentIndex].char === '\n' ? 'correct' : 'error';
-      pushHistory(newChars, currentIndex + 1); // ✅ 立即推进 currentIndex
+    if (e.key === 'Enter') {
+      e.preventDefault();
+      const newChars = [...chars];
+      if (currentIndex < newChars.length) {
+        newChars[currentIndex].status = newChars[currentIndex].char === '\n' ? 'correct' : 'error';
+        pushHistory(newChars, currentIndex + 1);
+      }
     }
-  }
   };
 
   const handleReset = () => {
-    const resetChars: CharacterState[] = text.split('').map(char => ({ 
-      char, 
-      status: 'untyped' as CharStatus 
-    }));
+    const resetChars: CharacterState[] = text.split('').map(char => ({ char, status: 'untyped' as CharStatus }));
     setChars(resetChars);
     setCurrentIndex(0);
     setHistory([{ chars: structuredClone(resetChars), currentIndex: 0 }]);
@@ -223,10 +207,7 @@ const TraceMode = () => {
         <div className="bg-card rounded-lg p-8 shadow-lg relative">
           <div className="text-2xl leading-relaxed whitespace-pre-wrap font-mono" style={{ wordBreak: 'break-all' }}>
             {chars.map((c, idx) => (
-              <span
-                key={idx}
-                className={`${getCharClass(c.status)} ${idx === currentIndex ? 'bg-accent/30' : ''}`}
-              >
+              <span key={idx} className={`${getCharClass(c.status)} ${idx === currentIndex ? 'bg-accent/30' : ''}`}>
                 {c.char === '\n' ? '↲\n' : c.char}
               </span>
             ))}

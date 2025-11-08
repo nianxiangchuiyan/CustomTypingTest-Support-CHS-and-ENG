@@ -12,47 +12,40 @@ interface CharacterState {
   status: CharStatus;
 }
 
+interface HistoryState {
+  chars: CharacterState[];
+  currentIndex: number;
+}
+
 const TraceMode = () => {
-  const [history, setHistory] = useState<{ chars: CharacterState[]; currentIndex: number }[]>([]);
-  const [redoStack, setRedoStack] = useState<{ chars: CharacterState[]; currentIndex: number }[]>([]); // ✅ 新增重做栈
+  const [chars, setChars] = useState<CharacterState[]>([]);
+  const [currentIndex, setCurrentIndex] = useState(0);
+  const [history, setHistory] = useState<HistoryState[]>([]);
+  const [redoStack, setRedoStack] = useState<HistoryState[]>([]);
+  const [isComposing, setIsComposing] = useState(false);
   const { textId } = useParams<{ textId: string }>();
   const navigate = useNavigate();
   const { toast } = useToast();
-  const [text, setText] = useState<string>('');
-  const [chars, setChars] = useState<CharacterState[]>([]);
-  const [currentIndex, setCurrentIndex] = useState(0);
+  const [text, setText] = useState('');
   const inputRef = useRef<HTMLTextAreaElement>(null);
-  const [isComposing, setIsComposing] = useState(false);
 
-  // 加载文本和进度
+  // 初始化文本和进度
   useEffect(() => {
-    if (!textId) {
-      navigate('/');
-      return;
-    }
-
+    if (!textId) return navigate('/');
     const savedText = getTextById(textId);
     if (!savedText) {
-      toast({
-        title: '文本未找到',
-        description: '返回主页重新选择',
-        variant: 'destructive',
-      });
-      navigate('/');
-      return;
+      toast({ title: '文本未找到', description: '返回主页重新选择', variant: 'destructive' });
+      return navigate('/');
     }
-
     setText(savedText.content);
     const savedProgress = getProgress(textId, 'trace');
-    setCurrentIndex(savedProgress);
-
-    const initialChars = savedText.content.split('').map((char, index) => ({
+    const initialChars = savedText.content.split('').map((char, idx) => ({
       char,
-      status: index < savedProgress ? 'correct' : 'untyped',
+      status: idx < savedProgress ? 'correct' : 'untyped',
     }));
-
     setChars(initialChars);
-    setHistory([{ chars: structuredClone(initialChars), currentIndex: savedProgress }]); // ✅ 初始状态加入历史记录
+    setCurrentIndex(savedProgress);
+    setHistory([{ chars: structuredClone(initialChars), currentIndex: savedProgress }]);
   }, [textId, navigate, toast]);
 
   // 自动保存
@@ -63,130 +56,91 @@ const TraceMode = () => {
     return () => clearInterval(interval);
   }, [textId, currentIndex]);
 
-  useEffect(() => {
-    inputRef.current?.focus();
-  }, []);
-
-  const handleReset = () => {
-    const resetChars = text.split('').map(char => ({ char, status: 'untyped' }));
-    setCurrentIndex(0);
-    setChars(resetChars);
-    setHistory([{ chars: structuredClone(resetChars), currentIndex: 0 }]);
-    setRedoStack([]);
-    if (textId) saveProgress(textId, 'trace', 0);
-    inputRef.current?.focus();
-  };
+  useEffect(() => inputRef.current?.focus(), []);
 
   const getCharClass = (status: CharStatus) => {
     switch (status) {
-      case 'correct':
-        return 'text-correct';
-      case 'error':
-        return 'text-error';
-      case 'untyped':
-        return 'text-untyped';
+      case 'correct': return 'text-correct';
+      case 'error': return 'text-error';
+      case 'untyped': return 'text-untyped';
     }
+  };
+
+  const pushHistory = (newChars: CharacterState[], newIndex: number) => {
+    setChars(newChars);
+    setCurrentIndex(newIndex);
+    setHistory(prev => {
+      const newHist = [...prev, { chars: structuredClone(newChars), currentIndex: newIndex }];
+      if (newHist.length > 100) newHist.shift();
+      return newHist;
+    });
+    setRedoStack([]);
+  };
+
+  const handleTypedText = (input: string) => {
+    let newIndex = currentIndex;
+    const newChars = [...chars];
+    for (const ch of input) {
+      if (newIndex >= newChars.length) break;
+      const expected = newChars[newIndex].char;
+      newChars[newIndex].status = ch === expected ? 'correct' : 'error';
+      newIndex++;
+    }
+    pushHistory(newChars, newIndex);
   };
 
   const handleCompositionStart = () => setIsComposing(true);
 
   const handleCompositionEnd = (e: React.CompositionEvent<HTMLTextAreaElement>) => {
-  setIsComposing(false);
-  const composedText = e.data || e.currentTarget.value || '';
-  e.currentTarget.value = '';
-
-  if (!composedText) return;
-
-  handleTypedText(composedText);
-};
-
-
-
-    pushHistory(newChars, newIndex);
-    setRedoStack([]); // ✅ 输入后清空重做栈
-
+    setIsComposing(false);
+    const composedText = e.data || '';
+    if (!composedText) return;
+    handleTypedText(composedText);
     e.currentTarget.value = '';
-    if (newIndex === chars.length && textId) {
-      saveProgress(textId, 'trace', newIndex);
-      toast({ title: '完成练习！', description: '恭喜您完成了全部文本' });
-    }
   };
 
-// ✅ 非 composition 状态输入（包括英文和回车）
-const handleInput = (e: React.FormEvent<HTMLTextAreaElement>) => {
-  if (isComposing) return; // 忽略输入法过程中的 input
-  const value = e.currentTarget.value;
-  e.currentTarget.value = '';
-  if (!value) return;
+  const handleInput = (e: React.FormEvent<HTMLTextAreaElement>) => {
+    if (isComposing) return;
+    const value = e.currentTarget.value;
+    e.currentTarget.value = '';
+    if (!value) return;
+    handleTypedText(value);
+  };
 
-  handleTypedText(value);
-};
+  const handleKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
+    if (isComposing) return;
 
-// ✅ 封装输入处理逻辑（统一处理中英文、回车）
-const handleTypedText = (input: string) => {
-  let newIndex = currentIndex;
-  const newChars = [...chars];
-
-  for (let i = 0; i < input.length && newIndex < newChars.length; i++) {
-    const inputChar = input[i];
-    const isCorrect = inputChar === newChars[newIndex].char;
-    newChars[newIndex].status = isCorrect ? 'correct' : 'error';
-    newIndex++;
-  }
-
-  pushHistory(newChars, newIndex);
-};
-
-  /** ✅ 封装历史推入逻辑 */
-  const pushHistory = (newChars: CharacterState[], newIndex: number) => {
-  setChars(newChars);
-  setCurrentIndex(newIndex);
-  setHistory(prev => {
-    const newHist = [...prev, { chars: structuredClone(newChars), currentIndex: newIndex }];
-    if (newHist.length > 100) newHist.shift();
-    return newHist;
-  });
-  setRedoStack([]); // 清空重做栈
-};
-
-
-    // ✅ Ctrl + Shift + Z 重做版本
-const handleKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
-  if (isComposing) return;
-
-  // ✅ 撤销 Ctrl + Z（不带 Shift）
-  if (e.ctrlKey && e.key.toLowerCase() === 'z' && !e.shiftKey) {
-    e.preventDefault();
-    if (history.length > 1) {
-      setHistory(prev => {
-        const newHist = [...prev];
-        const last = newHist.pop()!;
-        setRedoStack(r => [...r, last]); // 推入重做栈
-        const previous = newHist[newHist.length - 1];
-        setChars(structuredClone(previous.chars));
-        setCurrentIndex(previous.currentIndex);
-        return newHist;
-      });
+    // Ctrl+Z 撤销
+    if (e.ctrlKey && e.key.toLowerCase() === 'z' && !e.shiftKey) {
+      e.preventDefault();
+      if (history.length > 1) {
+        setHistory(prev => {
+          const newHist = [...prev];
+          const last = newHist.pop()!;
+          setRedoStack(r => [...r, last]);
+          const previous = newHist[newHist.length - 1];
+          setChars(structuredClone(previous.chars));
+          setCurrentIndex(previous.currentIndex);
+          return newHist;
+        });
+      }
+      return;
     }
-    return;
-  }
 
-  // ✅ 重做 Ctrl + Shift + Z
-  if (e.ctrlKey && e.shiftKey && e.key.toLowerCase() === 'z') {
-    e.preventDefault();
-    if (redoStack.length > 0) {
-      const next = redoStack[redoStack.length - 1];
-      setRedoStack(prev => prev.slice(0, -1));
-      setHistory(prev => [
-        ...prev,
-        { chars: structuredClone(next.chars), currentIndex: next.currentIndex },
-      ]);
-      setChars(structuredClone(next.chars));
-      setCurrentIndex(next.currentIndex);
+    // Ctrl+Shift+Z 重做
+    if (e.ctrlKey && e.shiftKey && e.key.toLowerCase() === 'z') {
+      e.preventDefault();
+      if (redoStack.length > 0) {
+        const next = redoStack[redoStack.length - 1];
+        setRedoStack(prev => prev.slice(0, -1));
+        setHistory(prev => [...prev, { chars: structuredClone(next.chars), currentIndex: next.currentIndex }]);
+        setChars(structuredClone(next.chars));
+        setCurrentIndex(next.currentIndex);
+      }
+      return;
     }
-    return;
-  }
-    // ✅ Backspace
+
+    // Backspace
     if (e.key === 'Backspace') {
       e.preventDefault();
       if (currentIndex > 0) {
@@ -195,47 +149,55 @@ const handleKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
         pushHistory(newChars, currentIndex - 1);
       }
     }
+
+    // Enter
+    if (e.key === 'Enter') {
+      e.preventDefault();
+      handleTypedText('\n');
+    }
   };
 
-  const progress = chars.length > 0 ? (currentIndex / chars.length) * 100 : 0;
+  const handleReset = () => {
+    const resetChars = text.split('').map(char => ({ char, status: 'untyped' }));
+    setChars(resetChars);
+    setCurrentIndex(0);
+    setHistory([{ chars: structuredClone(resetChars), currentIndex: 0 }]);
+    setRedoStack([]);
+    if (textId) saveProgress(textId, 'trace', 0);
+    inputRef.current?.focus();
+  };
+
+  const progress = chars.length ? (currentIndex / chars.length) * 100 : 0;
 
   return (
     <div className="min-h-screen bg-background p-6">
       <div className="max-w-4xl mx-auto space-y-6">
-        {/* Header */}
         <div className="flex items-center justify-between">
           <Button variant="ghost" onClick={() => navigate('/')}>
-            <ArrowLeft className="w-4 h-4 mr-2" />
-            返回主页
+            <ArrowLeft className="w-4 h-4 mr-2" /> 返回主页
           </Button>
           <div className="flex items-center gap-4">
             <div className="text-sm text-muted-foreground">
               进度: {currentIndex} / {chars.length} ({progress.toFixed(1)}%)
             </div>
             <Button variant="outline" size="sm" onClick={handleReset}>
-              <RotateCcw className="w-4 h-4 mr-2" />
-              重新开始
+              <RotateCcw className="w-4 h-4 mr-2" /> 重新开始
             </Button>
           </div>
         </div>
 
-        {/* Typing Area */}
         <div className="bg-card rounded-lg p-8 shadow-lg relative">
           <div className="text-2xl leading-relaxed whitespace-pre-wrap font-mono" style={{ wordBreak: 'break-all' }}>
-            {chars.map((char, index) => (
+            {chars.map((c, idx) => (
               <span
-                key={index}
-                className={`${getCharClass(char.status)} ${
-                  index === currentIndex ? 'bg-accent/30' : ''
-                } transition-colors`}
+                key={idx}
+                className={`${getCharClass(c.status)} ${idx === currentIndex ? 'bg-accent/30' : ''}`}
               >
-                {/* ✅ 回车符显示为 ↩️ */}
-                {char.char === '\n' ? '↲\n' : char.char}
+                {c.char === '\n' ? '↲\n' : c.char}
               </span>
             ))}
           </div>
 
-          {/* 隐藏输入框 */}
           <textarea
             ref={inputRef}
             className="absolute inset-0 w-full h-full opacity-0 cursor-text resize-none outline-none"
@@ -248,7 +210,7 @@ const handleKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
         </div>
 
         <div className="text-center text-sm text-muted-foreground">
-          点击文本区域开始输入 · 支持中文输入法 · 使用 Backspace 回退 · Ctrl+Z 撤销 · Ctrl+Shift+Y 重做
+          点击文本区域开始输入 · 支持中文输入法 · Backspace 回退 · Ctrl+Z 撤销 · Ctrl+Shift+Z 重做
         </div>
       </div>
     </div>

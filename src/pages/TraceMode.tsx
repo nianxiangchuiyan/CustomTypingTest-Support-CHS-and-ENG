@@ -232,7 +232,7 @@ const handleKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
                 } transition-colors`}
               >
                 {/* ✅ 回车符显示为 ↩️ */}
-                {char.char === '\n' ? '↩️\n' : char.char}
+                {char.char === '\n' ? '⏎\n' : char.char}
               </span>
             ))}
           </div>

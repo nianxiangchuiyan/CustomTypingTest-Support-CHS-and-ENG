@@ -1,4 +1,4 @@
-# Welcome to your Lovable project
+# 支持中英双语和自定义文本的打字测试。可用pdf或txt
 
 ## Project info
 

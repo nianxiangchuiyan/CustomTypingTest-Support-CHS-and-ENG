@@ -41,6 +41,7 @@ All colors MUST be HSL.
     --text-untyped: 147 15% 70%;
     --text-correct: 147 70% 50%;
     --text-error: 0 70% 55%;
+    --text-case-error: 45 100% 50%;
 
     --border: 147 20% 85%;
     --input: 42 30% 92%;
@@ -92,6 +93,7 @@ All colors MUST be HSL.
     --text-untyped: 147 15% 40%;
     --text-correct: 147 65% 55%;
     --text-error: 0 60% 50%;
+    --text-case-error: 45 100% 60%;
 
     --border: 147 25% 20%;
     --input: 147 20% 18%;
@@ -127,5 +129,8 @@ All colors MUST be HSL.
   }
   .text-error {
     color: hsl(var(--text-error));
+  }
+  .text-case-error {
+    color: hsl(var(--text-case-error));
   }
 }

@@ -5,7 +5,7 @@ import { ArrowLeft, RotateCcw } from 'lucide-react';
 import { getTextById, saveProgress, getProgress } from '@/lib/storage';
 import { useToast } from '@/hooks/use-toast';
 
-type CharStatus = 'untyped' | 'correct' | 'error';
+type CharStatus = 'untyped' | 'correct' | 'error' | 'case-error';
 
 interface CharacterState {
   char: string;
@@ -28,6 +28,8 @@ const TraceMode = () => {
   const { toast } = useToast();
   const [text, setText] = useState('');
   const inputRef = useRef<HTMLTextAreaElement>(null);
+  const textDisplayRef = useRef<HTMLDivElement>(null);
+  const currentCharRef = useRef<HTMLSpanElement>(null);
 
   // 初始化文本和进度
   // TraceMode 初始化
@@ -80,6 +82,7 @@ const TraceMode = () => {
     switch (status) {
       case 'correct': return 'text-correct';
       case 'error': return 'text-error';
+      case 'case-error': return 'text-case-error';
       case 'untyped': return 'text-untyped';
     }
   };
@@ -102,8 +105,15 @@ const TraceMode = () => {
 
     for (let i = 0; i < normalizedInput.length && newIndex < newChars.length; i++) {
       const inputChar = normalizedInput[i];
-      const isCorrect = inputChar === newChars[newIndex].char;
-      newChars[newIndex].status = isCorrect ? 'correct' : 'error';
+      const targetChar = newChars[newIndex].char;
+      
+      if (inputChar === targetChar) {
+        newChars[newIndex].status = 'correct';
+      } else if (inputChar.toLowerCase() === targetChar.toLowerCase()) {
+        newChars[newIndex].status = 'case-error';
+      } else {
+        newChars[newIndex].status = 'error';
+      }
       newIndex++;
     }
 
@@ -190,6 +200,28 @@ const TraceMode = () => {
     inputRef.current?.focus();
   };
 
+  // 自动滚动保持底部两行可见
+  useEffect(() => {
+    if (!currentCharRef.current || !textDisplayRef.current) return;
+    
+    const displayContainer = textDisplayRef.current;
+    const currentChar = currentCharRef.current;
+    const containerRect = displayContainer.getBoundingClientRect();
+    const charRect = currentChar.getBoundingClientRect();
+    
+    // 计算当前字符距离容器底部的距离
+    const distanceToBottom = containerRect.bottom - charRect.bottom;
+    const lineHeight = parseFloat(getComputedStyle(currentChar).lineHeight) || 40;
+    
+    // 如果当前字符离底部小于两行的高度，向下滚动
+    if (distanceToBottom < lineHeight * 2) {
+      displayContainer.scrollBy({
+        top: lineHeight,
+        behavior: 'smooth'
+      });
+    }
+  }, [currentIndex]);
+
   const progress = chars.length ? (currentIndex / chars.length) * 100 : 0;
 
   return (
@@ -210,9 +242,17 @@ const TraceMode = () => {
         </div>
 
         <div className="bg-card rounded-lg p-8 shadow-lg relative">
-          <div className="text-2xl leading-relaxed whitespace-pre-wrap font-mono" style={{ wordBreak: 'break-all' }}>
+          <div 
+            ref={textDisplayRef}
+            className="text-2xl leading-relaxed whitespace-pre-wrap font-mono max-h-[70vh] overflow-y-auto" 
+            style={{ wordBreak: 'keep-all', overflowWrap: 'break-word' }}
+          >
             {chars.map((c, idx) => (
-              <span key={idx} className={`${getCharClass(c.status)} ${idx === currentIndex ? 'bg-accent/30' : ''}`}>
+              <span 
+                key={idx} 
+                ref={idx === currentIndex ? currentCharRef : null}
+                className={`${getCharClass(c.status)} ${idx === currentIndex ? 'bg-accent/30' : ''}`}
+              >
                 {c.char === '\n' ? '↲\n' : c.char}
               </span>
             ))}

@@ -21,7 +21,7 @@ const translations = {
     'common.practice': '练习',
     'common.copy': '抄写',
     'common.trace': '临摹',
-    'common.language': '语言',
+    'common.language': '语言/Language',
     'common.chinese': '中文',
     'common.english': 'English',
     
@@ -80,7 +80,7 @@ const translations = {
     'common.practice': 'Practice',
     'common.copy': 'Copy',
     'common.trace': 'Trace',
-    'common.language': 'Language',
+    'common.language': 'Language/语言',
     'common.chinese': '中文',
     'common.english': 'English',
     

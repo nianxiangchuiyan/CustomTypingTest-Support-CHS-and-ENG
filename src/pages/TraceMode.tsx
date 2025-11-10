@@ -200,6 +200,19 @@ const TraceMode = () => {
     inputRef.current?.focus();
   };
 
+  // 初始化时滚动到保存的进度位置
+  useEffect(() => {
+    if (!currentCharRef.current || !textDisplayRef.current || currentIndex === 0) return;
+    
+    // 延迟执行以确保DOM已渲染
+    setTimeout(() => {
+      currentCharRef.current?.scrollIntoView({
+        behavior: 'smooth',
+        block: 'center'
+      });
+    }, 100);
+  }, [text]); // 只在文本加载完成时执行一次
+
   // 自动滚动保持底部两行可见
   useEffect(() => {
     if (!currentCharRef.current || !textDisplayRef.current) return;

@@ -4,7 +4,8 @@ import { Button } from '@/components/ui/button';
 import { FileText, Trash2, Clock } from 'lucide-react';
 import { getSavedTexts, deleteText } from '@/lib/storage';
 import { formatDistanceToNow } from 'date-fns';
-import { zhCN } from 'date-fns/locale';
+import { zhCN, enUS } from 'date-fns/locale';
+import { useLanguage } from '@/contexts/LanguageContext';
 import {
   AlertDialog,
   AlertDialogAction,
@@ -23,6 +24,7 @@ interface TextLibraryProps {
 export const TextLibrary = ({ onSelectText }: TextLibraryProps) => {
   const [texts, setTexts] = useState(getSavedTexts());
   const [deleteId, setDeleteId] = useState<string | null>(null);
+  const { t, language } = useLanguage();
 
   const handleDelete = (id: string) => {
     deleteText(id);
@@ -33,8 +35,8 @@ export const TextLibrary = ({ onSelectText }: TextLibraryProps) => {
   if (texts.length === 0) {
     return (
       <Card className="p-8 text-center">
-        <p className="text-muted-foreground">暂无已保存的文本</p>
-        <p className="text-sm text-muted-foreground mt-2">上传文件开始练习</p>
+        <p className="text-muted-foreground">{t('home.noTexts')}</p>
+        <p className="text-sm text-muted-foreground mt-2">{t('home.upload.description')}</p>
       </Card>
     );
   }
@@ -56,7 +58,7 @@ export const TextLibrary = ({ onSelectText }: TextLibraryProps) => {
                   <Clock className="w-3 h-3" />
                   {formatDistanceToNow(text.timestamp, {
                     addSuffix: true,
-                    locale: zhCN,
+                    locale: language === 'zh' ? zhCN : enUS,
                   })}
                 </p>
               </div>
@@ -79,18 +81,18 @@ export const TextLibrary = ({ onSelectText }: TextLibraryProps) => {
       <AlertDialog open={deleteId !== null} onOpenChange={() => setDeleteId(null)}>
         <AlertDialogContent>
           <AlertDialogHeader>
-            <AlertDialogTitle>确认删除</AlertDialogTitle>
+            <AlertDialogTitle>{t('common.delete')}</AlertDialogTitle>
             <AlertDialogDescription>
-              此操作将永久删除该文本及其练习进度，无法恢复。
+              {t('upload.error.description')}
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
-            <AlertDialogCancel>取消</AlertDialogCancel>
+            <AlertDialogCancel>{t('library.cancel')}</AlertDialogCancel>
             <AlertDialogAction
               onClick={() => deleteId && handleDelete(deleteId)}
               className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
             >
-              删除
+              {t('common.delete')}
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>

@@ -4,6 +4,8 @@ import { Button } from '@/components/ui/button';
 import { ArrowLeft, RotateCcw } from 'lucide-react';
 import { getTextById, saveProgress, getProgress } from '@/lib/storage';
 import { useToast } from '@/hooks/use-toast';
+import { useLanguage } from '@/contexts/LanguageContext';
+import { LanguageSwitcher } from '@/components/LanguageSwitcher';
 
 type CharStatus = 'untyped' | 'correct' | 'error' | 'case-error';
 
@@ -30,6 +32,7 @@ const TraceMode = () => {
   const inputRef = useRef<HTMLTextAreaElement>(null);
   const textDisplayRef = useRef<HTMLDivElement>(null);
   const currentCharRef = useRef<HTMLSpanElement>(null);
+  const { t } = useLanguage();
 
   // 初始化文本和进度
   // TraceMode 初始化
@@ -39,7 +42,7 @@ const TraceMode = () => {
     const savedText = getTextById(textId);
     console.log('TraceMode: savedText =', savedText);
     if (!savedText) {
-      toast({ title: '文本未找到', description: '返回主页重新选择', variant: 'destructive' });
+      toast({ title: t('upload.error.notFound'), description: t('upload.error.description'), variant: 'destructive' });
       return navigate('/');
     }
   
@@ -242,15 +245,16 @@ const TraceMode = () => {
       <div className="max-w-4xl mx-auto space-y-6">
         <div className="flex items-center justify-between">
           <Button variant="ghost" onClick={() => navigate('/')}>
-            <ArrowLeft className="w-4 h-4 mr-2" /> 返回主页
+            <ArrowLeft className="w-4 h-4 mr-2" /> {t('common.back')}
           </Button>
           <div className="flex items-center gap-4">
             <div className="text-sm text-muted-foreground">
-              进度: {currentIndex} / {chars.length} ({progress.toFixed(1)}%)
+              {t('common.progress')}: {currentIndex} / {chars.length} ({progress.toFixed(1)}%)
             </div>
             <Button variant="outline" size="sm" onClick={handleReset}>
-              <RotateCcw className="w-4 h-4 mr-2" /> 重新开始
+              <RotateCcw className="w-4 h-4 mr-2" /> {t('common.reset')}
             </Button>
+            <LanguageSwitcher />
           </div>
         </div>
 
@@ -283,7 +287,7 @@ const TraceMode = () => {
         </div>
 
         <div className="text-center text-sm text-muted-foreground">
-          点击文本区域开始输入 · 支持中文输入法 · Backspace 回退 · Ctrl+Z 撤销 · Ctrl+Shift+Z 重做
+          {t('trace.hint')}
         </div>
       </div>
     </div>

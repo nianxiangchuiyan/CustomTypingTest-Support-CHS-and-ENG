@@ -5,10 +5,13 @@ import { Card } from '@/components/ui/card';
 import { FileUploader } from '@/components/FileUploader';
 import { TextLibrary } from '@/components/TextLibrary';
 import { Keyboard, PenTool } from 'lucide-react';
+import { useLanguage } from '@/contexts/LanguageContext';
+import { LanguageSwitcher } from '@/components/LanguageSwitcher';
 
 const Home = () => {
   const navigate = useNavigate();
   const [selectedTextId, setSelectedTextId] = useState<string | null>(null);
+  const { t } = useLanguage();
 
   const handleSelectMode = (mode: 'trace' | 'copy') => {
     if (selectedTextId) {
@@ -19,20 +22,23 @@ const Home = () => {
   return (
     <div className="min-h-screen bg-background p-6">
       <div className="max-w-4xl mx-auto space-y-8">
-        <header className="text-center space-y-2">
-          <h1 className="text-4xl font-bold text-primary">打字练习</h1>
-          <p className="text-muted-foreground">提升您的打字速度和准确度</p>
+        <header className="flex justify-between items-start">
+          <div className="text-center space-y-2 flex-1">
+            <h1 className="text-4xl font-bold text-primary">{t('app.title')}</h1>
+            <p className="text-muted-foreground">{t('home.subtitle')}</p>
+          </div>
+          <LanguageSwitcher />
         </header>
 
         <div className="grid md:grid-cols-2 gap-6">
           <div className="space-y-4">
-            <h2 className="text-xl font-semibold">1. 选择或上传文本</h2>
+            <h2 className="text-xl font-semibold">{t('home.uploadFile')}</h2>
             <FileUploader onUploadComplete={setSelectedTextId} />
             <TextLibrary onSelectText={setSelectedTextId} />
           </div>
 
           <div className="space-y-4">
-            <h2 className="text-xl font-semibold">2. 选择练习模式</h2>
+            <h2 className="text-xl font-semibold">{t('upload.selectMode')}</h2>
             <Card
               className={`p-6 cursor-pointer transition-all hover:shadow-lg ${
                 selectedTextId
@@ -46,9 +52,9 @@ const Home = () => {
                   <Keyboard className="w-6 h-6 text-primary" />
                 </div>
                 <div className="flex-1">
-                  <h3 className="text-lg font-semibold mb-2">临摹模式</h3>
+                  <h3 className="text-lg font-semibold mb-2">{t('common.trace')}</h3>
                   <p className="text-sm text-muted-foreground">
-                    屏幕上显示淡色文字，跟随输入即时反馈。正确显示绿色，错误显示红色。
+                    {t('trace.hint')}
                   </p>
                 </div>
               </div>
@@ -67,9 +73,9 @@ const Home = () => {
                   <PenTool className="w-6 h-6 text-primary" />
                 </div>
                 <div className="flex-1">
-                  <h3 className="text-lg font-semibold mb-2">抄写模式</h3>
+                  <h3 className="text-lg font-semibold mb-2">{t('common.copy')}</h3>
                   <p className="text-sm text-muted-foreground">
-                    原文和输入框分离显示，可自由拖拽和调整大小，灵活布局。
+                    {t('copy.hint')}
                   </p>
                 </div>
               </div>
@@ -77,7 +83,7 @@ const Home = () => {
 
             {!selectedTextId && (
               <p className="text-sm text-center text-muted-foreground">
-                请先选择或上传文本
+                {t('upload.selectMode')}
               </p>
             )}
           </div>

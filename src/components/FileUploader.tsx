@@ -5,6 +5,7 @@ import { Upload, FileText } from 'lucide-react';
 import { parseFile, PdfPageData } from '@/lib/fileParser';
 import { saveText } from '@/lib/storage';
 import { useToast } from '@/hooks/use-toast';
+import { useLanguage } from '@/contexts/LanguageContext';
 
 interface FileUploaderProps {
   onUploadComplete: (textId: string) => void;
@@ -14,6 +15,7 @@ export const FileUploader = ({ onUploadComplete }: FileUploaderProps) => {
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [isUploading, setIsUploading] = useState(false);
   const { toast } = useToast();
+  const { t } = useLanguage();
 
   const handleFileSelect = async (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
@@ -35,7 +37,7 @@ export const FileUploader = ({ onUploadComplete }: FileUploaderProps) => {
       const textId = saveText(file.name, content);
     
       toast({
-        title: '文件上传成功',
+        title: t('upload.error.notFound'),
         description: `已保存 ${file.name}`,
       });
     
@@ -61,9 +63,9 @@ export const FileUploader = ({ onUploadComplete }: FileUploaderProps) => {
           <Upload className="w-8 h-8 text-primary" />
         </div>
         <div className="text-center space-y-2">
-          <h3 className="text-lg font-semibold">上传练习文本</h3>
+          <h3 className="text-lg font-semibold">{t('home.upload.title')}</h3>
           <p className="text-sm text-muted-foreground">
-            支持 .txt 和 .pdf 文件
+            {t('home.upload.description')}
           </p>
         </div>
         <Button
@@ -72,7 +74,7 @@ export const FileUploader = ({ onUploadComplete }: FileUploaderProps) => {
           className="gap-2"
         >
           <FileText className="w-4 h-4" />
-          {isUploading ? '上传中...' : '选择文件'}
+          {isUploading ? t('upload.parsing') : t('upload.button')}
         </Button>
         <input
           ref={fileInputRef}

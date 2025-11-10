@@ -7,6 +7,8 @@ import { ArrowLeft, RotateCcw } from 'lucide-react';
 import { getTextById, saveProgress, getProgress } from '@/lib/storage';
 import { useToast } from '@/hooks/use-toast';
 import Draggable from 'react-draggable';
+import { useLanguage } from '@/contexts/LanguageContext';
+import { LanguageSwitcher } from '@/components/LanguageSwitcher';
 
 const CopyMode = () => {
   const { textId } = useParams<{ textId: string }>();
@@ -18,6 +20,7 @@ const CopyMode = () => {
   const [inputSize, setInputSize] = useState({ width: 400, height: 300 });
   const [sourceZIndex, setSourceZIndex] = useState(20);
   const [inputZIndex, setInputZIndex] = useState(21);
+  const { t } = useLanguage();
 
   useEffect(() => {
     if (!textId) {
@@ -28,15 +31,23 @@ const CopyMode = () => {
     const savedText = getTextById(textId);
     if (!savedText) {
       toast({
-        title: '文本未找到',
-        description: '返回主页重新选择',
+        title: t('upload.error.notFound'),
+        description: t('upload.error.description'),
         variant: 'destructive',
       });
       navigate('/');
       return;
     }
 
-    setOriginalText(savedText.content);
+    // ✅ 如果 content 是数组（PDF），合并每页文本
+    let fullText = '';
+    if (Array.isArray(savedText.content)) {
+      fullText = savedText.content.map((p: any) => p.text || '').join('\n\n');
+    } else if (typeof savedText.content === 'string') {
+      fullText = savedText.content;
+    }
+
+    setOriginalText(fullText);
     const savedProgress = getProgress(textId, 'copy');
     setUserInput(savedText.content.substring(0, savedProgress));
   }, [textId, navigate, toast]);
@@ -72,16 +83,17 @@ const CopyMode = () => {
         <div className="flex items-center justify-between">
           <Button variant="ghost" onClick={() => navigate('/')}>
             <ArrowLeft className="w-4 h-4 mr-2" />
-            返回主页
+            {t('common.back')}
           </Button>
           <div className="flex items-center gap-4">
             <div className="text-sm text-muted-foreground">
-              进度: {userInput.length} / {originalText.length} ({progress.toFixed(1)}%)
+              {t('common.progress')}: {userInput.length} / {originalText.length} ({progress.toFixed(1)}%)
             </div>
             <Button variant="outline" size="sm" onClick={handleReset}>
               <RotateCcw className="w-4 h-4 mr-2" />
-              重新开始
+              {t('common.reset')}
             </Button>
+            <LanguageSwitcher />
           </div>
         </div>
 

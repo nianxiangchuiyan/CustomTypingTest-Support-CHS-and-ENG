@@ -25,6 +25,9 @@ const TraceMode = () => {
   const [history, setHistory] = useState<HistoryState[]>([]);
   const [redoStack, setRedoStack] = useState<HistoryState[]>([]);
   const [isComposing, setIsComposing] = useState(false);
+  const [startTime, setStartTime] = useState<number | null>(null);
+  const [endTime, setEndTime] = useState<number | null>(null);
+  const [isCompleted, setIsCompleted] = useState(false);
   const { textId } = useParams<{ textId: string }>();
   const navigate = useNavigate();
   const { toast } = useToast();
@@ -102,6 +105,11 @@ const TraceMode = () => {
   };
 
   const handleTypedText = (input: string) => {
+    // 第一次输入时开始计时
+    if (!startTime && !isCompleted) {
+      setStartTime(Date.now());
+    }
+
     const normalizedInput = input.replace(/\r\n/g, '\n');
     let newIndex = currentIndex;
     const newChars = [...chars];
@@ -121,6 +129,16 @@ const TraceMode = () => {
     }
 
     pushHistory(newChars, newIndex);
+
+    // 检查是否完成
+    if (newIndex >= newChars.length && !isCompleted) {
+      setEndTime(Date.now());
+      setIsCompleted(true);
+      toast({
+        title: t('stats.congratulations'),
+        description: t('stats.completed'),
+      });
+    }
   };
 
   const handleCompositionStart = () => setIsComposing(true);
@@ -199,6 +217,9 @@ const TraceMode = () => {
     setCurrentIndex(0);
     setHistory([{ chars: structuredClone(resetChars), currentIndex: 0 }]);
     setRedoStack([]);
+    setStartTime(null);
+    setEndTime(null);
+    setIsCompleted(false);
     if (textId) saveProgress(textId, 'trace', 0);
     inputRef.current?.focus();
   };
@@ -240,6 +261,22 @@ const TraceMode = () => {
 
   const progress = chars.length ? (currentIndex / chars.length) * 100 : 0;
 
+  // 计算统计数据
+  const calculateStats = () => {
+    if (!isCompleted || !startTime || !endTime) return null;
+    
+    const timeTaken = (endTime - startTime) / 1000; // 秒
+    const minutes = Math.floor(timeTaken / 60);
+    const seconds = Math.floor(timeTaken % 60);
+    
+    const correctCount = chars.filter(c => c.status === 'correct').length;
+    const accuracy = chars.length > 0 ? (correctCount / chars.length) * 100 : 0;
+    
+    return { minutes, seconds, accuracy };
+  };
+
+  const stats = calculateStats();
+
   return (
     <div className="min-h-screen bg-background p-6">
       <div className="max-w-4xl mx-auto space-y-6">
@@ -248,9 +285,24 @@ const TraceMode = () => {
             <ArrowLeft className="w-4 h-4 mr-2" /> {t('common.back')}
           </Button>
           <div className="flex items-center gap-4">
-            <div className="text-sm text-muted-foreground">
-              {t('common.progress')}: {currentIndex} / {chars.length} ({progress.toFixed(1)}%)
-            </div>
+            {!isCompleted && (
+              <div className="text-sm text-muted-foreground">
+                {t('common.progress')}: {currentIndex} / {chars.length} ({progress.toFixed(1)}%)
+              </div>
+            )}
+            {isCompleted && stats && (
+              <div className="flex items-center gap-4 text-sm font-medium">
+                <span className="text-green-600 dark:text-green-400">
+                  {t('stats.completed')}!
+                </span>
+                <span className="text-muted-foreground">
+                  {t('stats.time')}: {stats.minutes > 0 && `${stats.minutes}${t('stats.minutes')} `}{stats.seconds}{t('stats.seconds')}
+                </span>
+                <span className="text-muted-foreground">
+                  {t('stats.accuracy')}: {stats.accuracy.toFixed(1)}%
+                </span>
+              </div>
+            )}
             <Button variant="outline" size="sm" onClick={handleReset}>
               <RotateCcw className="w-4 h-4 mr-2" /> {t('common.reset')}
             </Button>

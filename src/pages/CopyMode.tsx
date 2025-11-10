@@ -20,6 +20,9 @@ const CopyMode = () => {
   const [inputSize, setInputSize] = useState({ width: 400, height: 300 });
   const [sourceZIndex, setSourceZIndex] = useState(20);
   const [inputZIndex, setInputZIndex] = useState(21);
+  const [startTime, setStartTime] = useState<number | null>(null);
+  const [endTime, setEndTime] = useState<number | null>(null);
+  const [isCompleted, setIsCompleted] = useState(false);
   const { t } = useLanguage();
 
   useEffect(() => {
@@ -64,18 +67,61 @@ const CopyMode = () => {
 
   const handleReset = () => {
     setUserInput('');
+    setStartTime(null);
+    setEndTime(null);
+    setIsCompleted(false);
     if (textId) {
       saveProgress(textId, 'copy', 0);
     }
   };
 
   const handleInputChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
-    setUserInput(e.target.value);
+    const newValue = e.target.value;
+    
+    // 第一次输入时开始计时
+    if (!startTime && newValue.length > 0 && !isCompleted) {
+      setStartTime(Date.now());
+    }
+    
+    setUserInput(newValue);
+    
+    // 检查是否完成
+    if (newValue.length >= originalText.length && !isCompleted) {
+      setEndTime(Date.now());
+      setIsCompleted(true);
+      toast({
+        title: t('stats.congratulations'),
+        description: t('stats.completed'),
+      });
+    }
   };
 
   const progress = originalText.length > 0 
     ? (userInput.length / originalText.length) * 100 
     : 0;
+
+  // 计算统计数据
+  const calculateStats = () => {
+    if (!isCompleted || !startTime || !endTime) return null;
+    
+    const timeTaken = (endTime - startTime) / 1000; // 秒
+    const minutes = Math.floor(timeTaken / 60);
+    const seconds = Math.floor(timeTaken % 60);
+    
+    // 计算准确率
+    let correctCount = 0;
+    const minLength = Math.min(userInput.length, originalText.length);
+    for (let i = 0; i < minLength; i++) {
+      if (userInput[i] === originalText[i]) {
+        correctCount++;
+      }
+    }
+    const accuracy = originalText.length > 0 ? (correctCount / originalText.length) * 100 : 0;
+    
+    return { minutes, seconds, accuracy };
+  };
+
+  const stats = calculateStats();
 
   return (
     <div className="min-h-screen bg-background p-6 relative overflow-hidden">
@@ -86,9 +132,24 @@ const CopyMode = () => {
             {t('common.back')}
           </Button>
           <div className="flex items-center gap-4">
-            <div className="text-sm text-muted-foreground">
-              {t('common.progress')}: {userInput.length} / {originalText.length} ({progress.toFixed(1)}%)
-            </div>
+            {!isCompleted && (
+              <div className="text-sm text-muted-foreground">
+                {t('common.progress')}: {userInput.length} / {originalText.length} ({progress.toFixed(1)}%)
+              </div>
+            )}
+            {isCompleted && stats && (
+              <div className="flex items-center gap-4 text-sm font-medium">
+                <span className="text-green-600 dark:text-green-400">
+                  {t('stats.completed')}!
+                </span>
+                <span className="text-muted-foreground">
+                  {t('stats.time')}: {stats.minutes > 0 && `${stats.minutes}${t('stats.minutes')} `}{stats.seconds}{t('stats.seconds')}
+                </span>
+                <span className="text-muted-foreground">
+                  {t('stats.accuracy')}: {stats.accuracy.toFixed(1)}%
+                </span>
+              </div>
+            )}
             <Button variant="outline" size="sm" onClick={handleReset}>
               <RotateCcw className="w-4 h-4 mr-2" />
               {t('common.reset')}

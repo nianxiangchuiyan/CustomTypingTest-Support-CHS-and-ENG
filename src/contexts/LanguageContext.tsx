@@ -25,6 +25,14 @@ const translations = {
     'common.chinese': '中文',
     'common.english': 'English',
     
+    // 统计
+    'stats.time': '用时',
+    'stats.accuracy': '准确率',
+    'stats.completed': '练习完成',
+    'stats.congratulations': '恭喜完成',
+    'stats.minutes': '分钟',
+    'stats.seconds': '秒',
+    
     // 主页
     'home.title': '打字练习',
     'home.subtitle': '提升你的打字速度和准确度',
@@ -75,6 +83,14 @@ const translations = {
     'common.language': 'Language',
     'common.chinese': '中文',
     'common.english': 'English',
+    
+    // Statistics
+    'stats.time': 'Time',
+    'stats.accuracy': 'Accuracy',
+    'stats.completed': 'Practice Completed',
+    'stats.congratulations': 'Congratulations',
+    'stats.minutes': 'min',
+    'stats.seconds': 'sec',
     
     // Home
     'home.title': 'Typing Practice',

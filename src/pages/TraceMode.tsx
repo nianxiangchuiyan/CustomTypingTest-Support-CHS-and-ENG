@@ -28,6 +28,8 @@ const TraceMode = () => {
   const [startTime, setStartTime] = useState<number | null>(null);
   const [endTime, setEndTime] = useState<number | null>(null);
   const [isCompleted, setIsCompleted] = useState(false);
+  const [isPaused, setIsPaused] = useState(false);
+  const [currentTime, setCurrentTime] = useState(0);
   const { textId } = useParams<{ textId: string }>();
   const navigate = useNavigate();
   const { toast } = useToast();
@@ -82,6 +84,29 @@ const TraceMode = () => {
     return () => clearInterval(interval);
   }, [textId, currentIndex]);
 
+  // 实时更新计时器
+  useEffect(() => {
+    if (!startTime || endTime || isPaused) return;
+    
+    const interval = setInterval(() => {
+      setCurrentTime(Date.now() - startTime);
+    }, 100);
+    
+    return () => clearInterval(interval);
+  }, [startTime, endTime, isPaused]);
+
+  // ESC键控制暂停/继续
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape' && startTime && !isCompleted) {
+        setIsPaused(prev => !prev);
+      }
+    };
+    
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [startTime, isCompleted]);
+
   useEffect(() => inputRef.current?.focus(), []);
 
   const getCharClass = (status: CharStatus) => {
@@ -105,6 +130,9 @@ const TraceMode = () => {
   };
 
   const handleTypedText = (input: string) => {
+    // 暂停时不允许输入
+    if (isPaused) return;
+    
     // 第一次输入时开始计时
     if (!startTime && !isCompleted) {
       setStartTime(Date.now());
@@ -276,6 +304,14 @@ const TraceMode = () => {
   };
 
   const stats = calculateStats();
+  
+  // 格式化当前计时器显示
+  const formatCurrentTime = () => {
+    const totalSeconds = Math.floor(currentTime / 1000);
+    const minutes = Math.floor(totalSeconds / 60);
+    const seconds = totalSeconds % 60;
+    return `${minutes}:${seconds.toString().padStart(2, '0')}`;
+  };
 
   return (
     <div className="min-h-screen bg-background p-6">
@@ -285,6 +321,18 @@ const TraceMode = () => {
             <ArrowLeft className="w-4 h-4 mr-2" /> {t('common.back')}
           </Button>
           <div className="flex items-center gap-4">
+            {!isCompleted && startTime && (
+              <div className="flex items-center gap-3">
+                <div className="text-lg font-mono font-bold tabular-nums">
+                  {formatCurrentTime()}
+                </div>
+                {isPaused && (
+                  <span className="text-sm text-orange-600 dark:text-orange-400">
+                    {t('stats.paused')} - {t('stats.pressEsc')}
+                  </span>
+                )}
+              </div>
+            )}
             {!isCompleted && (
               <div className="text-sm text-muted-foreground">
                 {t('common.progress')}: {currentIndex} / {chars.length} ({progress.toFixed(1)}%)

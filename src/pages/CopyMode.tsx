@@ -23,6 +23,8 @@ const CopyMode = () => {
   const [startTime, setStartTime] = useState<number | null>(null);
   const [endTime, setEndTime] = useState<number | null>(null);
   const [isCompleted, setIsCompleted] = useState(false);
+  const [isPaused, setIsPaused] = useState(false);
+  const [currentTime, setCurrentTime] = useState(0);
   const { t } = useLanguage();
 
   useEffect(() => {
@@ -65,17 +67,45 @@ const CopyMode = () => {
     return () => clearInterval(interval);
   }, [textId, userInput]);
 
+  // 实时更新计时器
+  useEffect(() => {
+    if (!startTime || endTime || isPaused) return;
+    
+    const interval = setInterval(() => {
+      setCurrentTime(Date.now() - startTime);
+    }, 100);
+    
+    return () => clearInterval(interval);
+  }, [startTime, endTime, isPaused]);
+
+  // ESC键控制暂停/继续
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape' && startTime && !isCompleted) {
+        setIsPaused(prev => !prev);
+      }
+    };
+    
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [startTime, isCompleted]);
+
   const handleReset = () => {
     setUserInput('');
     setStartTime(null);
     setEndTime(null);
     setIsCompleted(false);
+    setIsPaused(false);
+    setCurrentTime(0);
     if (textId) {
       saveProgress(textId, 'copy', 0);
     }
   };
 
   const handleInputChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
+    // 暂停时不允许输入
+    if (isPaused) return;
+    
     const newValue = e.target.value;
     
     // 第一次输入时开始计时
@@ -122,6 +152,14 @@ const CopyMode = () => {
   };
 
   const stats = calculateStats();
+  
+  // 格式化当前计时器显示
+  const formatCurrentTime = () => {
+    const totalSeconds = Math.floor(currentTime / 1000);
+    const minutes = Math.floor(totalSeconds / 60);
+    const seconds = totalSeconds % 60;
+    return `${minutes}:${seconds.toString().padStart(2, '0')}`;
+  };
 
   return (
     <div className="min-h-screen bg-background p-6 relative overflow-hidden">
@@ -132,6 +170,18 @@ const CopyMode = () => {
             {t('common.back')}
           </Button>
           <div className="flex items-center gap-4">
+            {!isCompleted && startTime && (
+              <div className="flex items-center gap-3">
+                <div className="text-lg font-mono font-bold tabular-nums">
+                  {formatCurrentTime()}
+                </div>
+                {isPaused && (
+                  <span className="text-sm text-orange-600 dark:text-orange-400">
+                    {t('stats.paused')} - {t('stats.pressEsc')}
+                  </span>
+                )}
+              </div>
+            )}
             {!isCompleted && (
               <div className="text-sm text-muted-foreground">
                 {t('common.progress')}: {userInput.length} / {originalText.length} ({progress.toFixed(1)}%)
@@ -249,6 +299,7 @@ const CopyMode = () => {
                 onChange={handleInputChange}
                 className="h-full resize-none font-mono text-base"
                 placeholder="在此输入..."
+                disabled={isPaused}
               />
             </div>
             <div

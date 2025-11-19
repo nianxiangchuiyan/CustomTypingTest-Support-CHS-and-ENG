@@ -32,6 +32,8 @@ const translations = {
     'stats.congratulations': '恭喜完成',
     'stats.minutes': '分钟',
     'stats.seconds': '秒',
+    'stats.paused': '已暂停',
+    'stats.pressEsc': '按 ESC 继续',
     
     // 主页
     'home.title': '打字练习',
@@ -91,6 +93,8 @@ const translations = {
     'stats.congratulations': 'Congratulations',
     'stats.minutes': 'min',
     'stats.seconds': 'sec',
+    'stats.paused': 'Paused',
+    'stats.pressEsc': 'Press ESC to continue',
     
     // Home
     'home.title': 'Typing Practice',
